@@ -8,12 +8,12 @@ const aliases: Record<string, string> = {
   flags: 'feature_flags', recordings: 'session_recordings', 'early-access': 'early_access_feature', schedules: 'scheduled_changes',
 };
 export function resourceRoot(name: string): string {
-  if (name === 'projects') return '/api/projects/';
+  if (name === 'projects') return '/api/organizations/{organization_id}/projects/';
   return `/api/projects/{project_id}/${aliases[name] ?? name.replaceAll('-', '_')}/`;
 }
 export function resourceOperations(registry: Registry, name: string): Operation[] {
   const root = resourceRoot(name);
-  return registry.operations.filter(op => op.path.startsWith(root) && (name !== 'projects' || /^\/api\/projects\/(?:\{id\}\/)?$/.test(op.path)));
+  return registry.operations.filter(op => op.path.startsWith(root));
 }
 export function resources(registry: Registry): string[] {
   const names = new Set(['projects']);
@@ -53,7 +53,7 @@ export async function resourceCommand(registry: Registry, client: Client, name: 
   if (!op) throw new AxiError('unknown_action', 'Action not found for resource', [`posthog-axi ${name} --help`]);
   const directQuery = op.parameters.filter(p => p.in === 'query').map(p => p.name.replaceAll('_', '-'));
   args.allow([...REQUEST_FLAGS, ...directQuery, 'ensure']);
-  const idParams = [...op.path.matchAll(/\{([^}]+)\}/g)].map(m => m[1]!).filter(p => p !== 'project_id');
+  const idParams = [...op.path.matchAll(/\{([^}]+)\}/g)].map(m => m[1]!).filter(p => p !== 'project_id' && p !== 'organization_id');
   args.count(1, 3);
   const extra = [...args.many('param')];
   if (args.words[2] !== undefined) {
