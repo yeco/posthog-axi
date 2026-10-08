@@ -1,5 +1,5 @@
 import { readFile, writeFile } from 'node:fs/promises';
-import { gzipSync } from 'node:zlib';
+import { gzipSync, gunzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
 import { Registry, hash, parseDocument, buildPath, schemaMetadata } from '../dist/schema.js';
 import { Client } from '../dist/http.js';
@@ -17,6 +17,8 @@ if (action === 'update') {
 } else if (action === 'check') {
   const registry = new Registry(); const meta = schemaMetadata();
   const expected = registry.operations.map(({ id, method, path }) => ({ operation: id, method, path, command: `api call ${id}` }));
+  const bytes = gunzipSync(await readFile(new URL('openapi.json.gz', root)));
+  if (createHash('sha256').update(bytes).digest('hex') !== meta.snapshot_sha256) throw new Error('Snapshot byte digest mismatch');
   const recorded = JSON.parse(await readFile(new URL('coverage.json', root), 'utf8'));
   if (hash(expected) !== hash(recorded) || hash(registry.document) !== meta.sha256 || registry.operations.length !== meta.operations) throw new Error('Schema or coverage metadata is stale; run npm run schema:update and review the diff');
   for (const op of registry.operations) buildPath(registry.get(op.id), Object.fromEntries([...op.path.matchAll(/\{([^}]+)\}/g)].map(m => [m[1], '123'])), '613011');

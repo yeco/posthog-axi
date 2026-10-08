@@ -1,11 +1,11 @@
 import { readFile } from 'node:fs/promises';
 import { basename } from 'node:path';
-import { Args, pairs, uniquePairs } from './args.js';
+import { Args, pairs, uniquePairs, integer } from './args.js';
 import { AxiError, object, usage } from './errors.js';
 import { Client, type RequestOptions } from './http.js';
 import { buildPath, Registry, resolveRef, type Operation } from './schema.js';
 
-export const REQUEST_FLAGS = ['param', 'query', 'header', 'data', 'input', 'raw', 'content-type', 'form', 'file-field', 'confirm', 'all'];
+export const REQUEST_FLAGS = ['param', 'query', 'header', 'data', 'input', 'raw', 'content-type', 'form', 'file-field', 'confirm', 'all', 'max-events'];
 export async function inputFile(path: string): Promise<Buffer> {
   try {
     if (path !== '-') return await readFile(path);
@@ -53,7 +53,7 @@ export async function execute(registry: Registry, client: Client, op: Operation,
     if (parameter.required && parameter.in === 'query' && !url.searchParams.has(parameter.name)) usage(`Missing required query parameter ${parameter.name}`);
     if (parameter.required && parameter.in === 'header' && !Object.keys(headers).some(k => k.toLowerCase() === parameter.name.toLowerCase())) usage(`Missing required header ${parameter.name}`);
   }
-  const options = { ...await bodyOptions(args), headers };
+  const options = { ...await bodyOptions(args), headers, maxEvents: integer(args.get('max-events'), 20, 1, 10000) };
   if (['GET', 'HEAD'].includes(op.method) && options.body !== undefined) usage('GET and HEAD do not accept request bodies');
   const bodySpec = resolveRef(registry.document, op.definition.requestBody);
   if (bodySpec.required && options.body === undefined) usage('This operation requires a body; use api describe for its schema');

@@ -1,4 +1,4 @@
-import { Args, integer, pairs } from './args.js';
+import { Args, integer, pairs, uniquePairs } from './args.js';
 import { AxiError, object, usage } from './errors.js';
 import { execute, jsonBody, requireConfirmation, REQUEST_FLAGS, subset } from './execute.js';
 import { Client } from './http.js';
@@ -47,11 +47,13 @@ export async function resourceCommand(registry: Registry, client: Client, name: 
   const ops = resourceOperations(registry, name), root = resourceRoot(name);
   if (!ops.length) throw new AxiError('unknown_command', 'Unknown resource', ['posthog-axi api resources']);
   const action = args.words[1] ?? 'list';
-  if (args.has('help')) return { resource: name, operations: ops.map(op => ({ command: verb(op, root), method: op.method, path: op.path })), help: ['<resource> list|show ID|create|update ID|replace ID|delete ID', 'Bodies: --data <json> or --input <file|->. Mutations: --confirm.', 'Create with --ensure <field> for sequential reconciliation. Use api describe <operation> for its contract.', 'Nonstandard actions use the exact operation ID as the subcommand.'] };
+  if (args.has('help')) return { resource: name, shortcuts: name === 'flags' ? ['ensure --data <json>', 'enable ID --confirm', 'disable ID --confirm', 'rollout ID PERCENT --condition INDEX --confirm', 'Schedules: posthog-axi schedules --help'] : [], operations: ops.map(op => ({ command: verb(op, root), method: op.method, path: op.path })), help: ['<resource> list|show ID|create|update ID|replace ID|delete ID', 'Bodies: --data <json> or --input <file|->. Mutations: --confirm.', 'Create with --ensure <field> for sequential reconciliation. Use api describe <operation> for its contract.', 'Nonstandard actions use the exact operation ID as the subcommand.'] };
   if (name === 'flags' && ['enable', 'disable', 'rollout', 'ensure'].includes(action)) return flagCommand(registry, client, args, project);
   const op = ops.find(op => verb(op, root) === action || op.id === action);
   if (!op) throw new AxiError('unknown_action', 'Action not found for resource', [`posthog-axi ${name} --help`]);
-  const directQuery = op.parameters.filter(p => p.in === 'query').map(p => p.name.replaceAll('_', '-'));
+  const reserved = new Set([...REQUEST_FLAGS, 'ensure', 'host', 'project', 'full', 'json', 'help', 'timeout']);
+  const directParameters = op.parameters.filter(p => p.in === 'query' && !reserved.has(p.name.replaceAll('_', '-')));
+  const directQuery = directParameters.map(p => p.name.replaceAll('_', '-'));
   args.allow([...REQUEST_FLAGS, ...directQuery, 'ensure']);
   const idParams = [...op.path.matchAll(/\{([^}]+)\}/g)].map(m => m[1]!).filter(p => p !== 'project_id' && p !== 'organization_id');
   args.count(1, 3);
@@ -64,13 +66,14 @@ export async function resourceCommand(registry: Registry, client: Client, name: 
   for (const [k, v] of args.flags) if (!directQuery.includes(k) && k !== 'ensure') forwarded.flags.set(k, v);
   forwarded.flags.set('param', extra);
   const query = [...args.many('query')];
-  for (const p of op.parameters.filter(p => p.in === 'query')) {
+  for (const p of directParameters) {
     const v = args.get(p.name.replaceAll('_', '-')); if (v !== undefined) query.push(`${p.name}=${v}`);
   }
   if (action === 'list' && op.parameters.some(p => p.name === 'limit') && !pairs(query).some(([k]) => k === 'limit')) query.push('limit=20');
   forwarded.flags.set('query', query);
   requireConfirmation(args, op.method);
-  const path = buildPath(op, Object.fromEntries(pairs(extra)), project);
+  const path = buildPath(op, uniquePairs(extra), project);
+  if (args.has('all') && op.method !== 'GET') usage('--all is only valid for list/read operations');
   const jsonOnly = args.has('data') || args.has('input');
   if (args.has('ensure')) {
     if (action !== 'create' || !jsonOnly) usage('--ensure is for create with a JSON body');
@@ -85,7 +88,7 @@ export async function resourceCommand(registry: Registry, client: Client, name: 
     if (!Array.isArray(rows)) throw new AxiError('invalid_response', 'Expected a resource list');
     const matches = rows.map(object).filter(row => row[field] === desired[field]);
     if (matches.length > 1) throw new AxiError('ambiguous_match', 'Multiple objects have this identity; use an explicit ID');
-    if (matches[0]) return patchState(client, detailPath(path, matches[0].id), desired, name === 'flags', matches[0]);
+    if (matches[0]) return patchState(client, detailPath(path, matches[0].id), desired, name === 'flags');
   } else if (action === 'update' && jsonOnly) {
     if (args.has('raw') || args.has('form') || args.has('file-field') || args.has('header') || query.length) usage('Reconciled updates accept JSON only; use api call for other encodings or headers');
     const desired = await jsonBody(args);

@@ -1,3 +1,4 @@
+import { readEvents } from './stream.js';
 import { AxiError, object } from './errors.js';
 
 export function normalizeHost(host: string): string {
@@ -15,6 +16,7 @@ export interface RequestOptions {
   contentType?: string;
   headers?: Record<string, string>;
   public?: boolean;
+  maxEvents?: number;
 }
 
 export class Client {
@@ -55,6 +57,7 @@ export class Client {
       }
       if (response.status === 204 || method === 'HEAD') return null;
       const contentType = response.headers.get('content-type') ?? '';
+      if (contentType.includes('text/event-stream')) return await readEvents(response, options.maxEvents ?? 20);
       if (contentType.includes('json')) {
         try { return await response.json(); } catch { throw new AxiError('invalid_response', 'PostHog returned malformed JSON'); }
       }
