@@ -90,3 +90,27 @@ test('keys are redacted in JSON, TOON, home data and errors', async () => {
     assert.equal(result.code, 0); assert.ok(!result.output.includes('phx_test_only')); assert.ok(!result.output.includes('secret'));
   }
 });
+test('every requested resource has executable read shortcuts', async () => {
+  for (const resource of ['flags', 'experiments', 'surveys', 'actions', 'cohorts', 'insights', 'dashboards', 'annotations', 'persons', 'events', 'recordings', 'early-access', 'schedules', 'projects']) {
+    const argv = [resource, 'list', ...(resource === 'projects' ? ['--param', 'organization_id=test-org'] : [])];
+    const result = await cli(argv, async () => json({ results: [], next: null })); assert.equal(result.code, 0, resource);
+  }
+});
+test('ambiguous ensure and duplicate IDs refuse mutations', async () => {
+  let writes = 0;
+  const result = await cli(['surveys', 'create', '--ensure', 'name', '--data', '{"name":"dup"}', '--confirm'], async (_url, init) => {
+    if (init.method !== 'GET') writes++;
+    return json({ results: [{ id: 1, name: 'dup' }, { id: 2, name: 'dup' }], next: null });
+  });
+  assert.equal(result.error.code, 'ambiguous_match'); assert.equal(writes, 0);
+  assert.equal((await cli(['flags', 'update', '1', '--param', 'id=2', '--data', '{}', '--confirm'])).code, 2);
+});
+test('live api-version omits Authorization and --check distinguishes drift', async () => {
+  const { loadSchema } = await import('../dist/schema.js');
+  const fetch = async (url, init) => {
+    assert.equal(url.pathname, '/api/schema/'); assert.equal(init.headers.has('authorization'), false);
+    return json({ ...loadSchema(), info: { title: 'PostHog API', version: 'different' } });
+  };
+  const result = await cli(['api-version', '--check'], fetch);
+  assert.equal(result.code, 3); assert.equal(result.drift, true); assert.ok(result.target.sha256);
+});
