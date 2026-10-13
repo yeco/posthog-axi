@@ -41,7 +41,7 @@ export class Client {
     for (const name of ['authorization', 'cookie', 'host', 'proxy-authorization']) {
       if (headers.has(name)) throw new AxiError('unsafe_header', 'Authentication and routing headers cannot be overridden');
     }
-    headers.set('Accept', 'application/json');
+    if (!headers.has('Accept')) headers.set('Accept', 'application/json');
     if (!options.public) headers.set('Authorization', `Bearer ${this.key}`);
     if (options.contentType) headers.set('Content-Type', options.contentType);
     // No automatic retries: a lost response may already have committed a write.

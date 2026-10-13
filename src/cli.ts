@@ -28,6 +28,11 @@ export async function run(argv: string[], runtime: Runtime = {}): Promise<{ outp
     if (command === 'api' && args.has('help')) return output({ usage: 'api resources | operations [--search <text>] | describe <operation> | schema <name> | call <operation>', request: REQUEST_FLAGS, help: ['Path values: --param name=value. Query values: --query name=value.', 'JSON: --data or --input. Multipart: --form name=value --file-field name=path.', 'Binary: --raw file --content-type <type>. Responses retain text or base64 bytes.'] });
     if (command === 'query' && args.has('help')) return output({ usage: 'query <SQL> | query --file <file|-> | query status <id> | query cancel <id> --confirm', options: ['--refresh <blocking|async|...> --name <label> --full --json'] });
     if (command === 'api-version' && args.has('help')) return output({ usage: 'api-version [--offline] [--check]', note: 'Reports the pinned snapshot and compares live /api/schema/ without credentials. --check exits 3 on drift; --offline makes no request.' });
+    if (command === 'api-version' && args.has('offline')) {
+      args.allow(['offline', 'check']); args.count(1);
+      if (args.has('check')) usage('--check needs a live comparison; omit --offline');
+      return output({ target: schemaMetadata(), comparison: 'not_requested' });
+    }
     const registry = new Registry();
     if (command === 'api' && args.words[1] !== 'call') {
       const action = args.words[1];
@@ -67,9 +72,7 @@ export async function run(argv: string[], runtime: Runtime = {}): Promise<{ outp
     if (command === 'auth') { args.allow([]); args.count(1); return output({ host: config.host, project: config.project, auth: config.auth, note: 'Local credential presence, not a live authentication check.' }); }
     if (command === 'api-version') {
       args.allow(['offline', 'check']); args.count(1);
-      if (args.has('offline') && args.has('check')) usage('--check needs a live comparison; omit --offline');
       const target = schemaMetadata();
-      if (args.has('offline')) return output({ target, comparison: 'not_requested' });
       const live = parseDocument(await client.request('GET', '/api/schema/', { public: true }));
       const report = driftReport(registry.document, live);
       return output({ target, ...report }, args.has('check') && report.drift ? 3 : 0);
