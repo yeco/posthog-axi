@@ -85,9 +85,14 @@ export async function resourceCommand(registry: Registry, client: Client, name: 
     const list = ops.find(o => o.path === root && o.method === 'GET');
     const patch = ops.find(o => verb(o, root) === 'update');
     if (!list || !patch) usage('This resource cannot reconcile; use explicit create');
-    const all = await client.pages(path, true);
-    const rows = Array.isArray(all) ? all : object(all).results;
-    if (!Array.isArray(rows)) throw new AxiError('invalid_response', 'Expected a resource list');
+    const listPaths = name === 'flags' ? [`${path}?archived=false`, `${path}?archived=true`] : [path];
+    const rows: unknown[] = [];
+    for (const listPath of listPaths) {
+      const all = await client.pages(listPath, true);
+      const pageRows = Array.isArray(all) ? all : object(all).results;
+      if (!Array.isArray(pageRows)) throw new AxiError('invalid_response', 'Expected a resource list');
+      rows.push(...pageRows);
+    }
     const matches = rows.map(object).filter(row => row[field] === desired[field]);
     if (matches.length > 1) throw new AxiError('ambiguous_match', 'Multiple objects have this identity; use an explicit ID');
     if (matches[0]) return patchState(client, detailPath(path, matches[0].id), desired, name === 'flags');
