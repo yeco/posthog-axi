@@ -22,9 +22,9 @@ npm run build
 node dist/bin.js --help
 ```
 
-`login` prompts for a personal API key without echoing it, verifies it with PostHog, and writes a 0600 file at `~/.config/posthog-axi/config.json`. `XDG_CONFIG_HOME` changes that base directory. There is no key argument to leak into shell history. Create a key with the scopes you need in [PostHog's personal API key settings](https://us.posthog.com/settings/user-api-keys).
+`login` asks for the host (default `https://us.posthog.com`), the project ID and a personal API key. It doesn't echo the key, verifies it with PostHog, and writes a 0600 file at `~/.config/posthog-axi/config.json`. `XDG_CONFIG_HOME` changes that base directory. There is no key argument to leak into shell history. Create a key with the scopes you need in [PostHog's personal API key settings](https://us.posthog.com/settings/user-api-keys).
 
-My defaults are `https://us.posthog.com` and project `613011`. Override them explicitly:
+There's no built-in project. Without a saved or supplied project, project commands fail with `missing_project` and tell you to run `posthog-axi login` or pass `--project`. Override the saved target explicitly:
 
 ```sh
 posthog-axi flags list --host https://eu.posthog.com --project 123
@@ -32,7 +32,7 @@ posthog-axi auth
 posthog-axi logout
 ```
 
-For automation, provide `POSTHOG_API_KEY` through your secret environment, with optional `POSTHOG_HOST` and `POSTHOG_PROJECT_ID`. Flags override environment values. A supplied environment key bypasses saved credentials and uses environment/default connection settings. Without an environment key, saved settings precede the defaults. A saved key is bound to its host and is never reused for a different `--host`. `logout` removes the file; it cannot unset your environment.
+For automation, provide `POSTHOG_API_KEY` through your secret environment, with optional `POSTHOG_HOST` and `POSTHOG_PROJECT_ID`. Flags override environment values. A supplied environment key bypasses saved credentials and uses the environment and flag connection settings. Without an environment key, saved settings apply unless a flag or environment variable overrides them. A saved key is bound to its host and is never reused for a different `--host`. `logout` removes the file; it cannot unset your environment.
 
 No arguments gives a compact home with the selected target and, when authenticated, recent flags. An unavailable project or missing scope shows a connection error rather than an empty result.
 
@@ -56,7 +56,7 @@ posthog-axi api call feature_flags_versions_retrieve \
   --param id=123 --param version_number=4
 posthog-axi projects list --param organization_id=ORG_ID
 posthog-axi api call organizations_projects_retrieve \
-  --param organization_id=ORG_ID --param id=613011
+  --param organization_id=ORG_ID --param id=PROJECT_ID
 ```
 
 The current schema places project administration under organizations, so those commands need an organization ID. Other project operations fill `project_id` from the selected project automatically.
@@ -89,7 +89,7 @@ posthog-axi flags delete 123 --confirm
 
 `enable`, `disable` and JSON `update` read current state and skip an already-applied change. Flag writes carry the current version; rollout changes one condition without replacing its neighbors or variant distribution. A version conflict requires a fresh read.
 
-`create --ensure <field>` matches a stable field, then creates or updates. `flags ensure` uses the key field. Multiple matches are an error, and deleting an already-absent object succeeds as unchanged. Ensure is sequential reconciliation, not a distributed lock: concurrent creates can race, and a resource without a unique server constraint can still get duplicates.
+`create --ensure <field>` matches a stable field, then creates or updates. `flags ensure` uses the key field and also matches archived flags. If the match is archived and your body doesn't set `archived`, it returns `status: archived` with the unarchive command instead of changing anything. Multiple matches are an error, and deleting an already-absent object succeeds as unchanged. Ensure is sequential reconciliation, not a distributed lock: concurrent creates can race, and a resource without a unique server constraint can still get duplicates.
 
 Plain create, replace and arbitrary `api call` mutations keep the API's semantics. They are not promised to be idempotent. All writes require `--confirm` and none are retried automatically. After a timeout, check the server state before repeating the request. HogQL execution is a read-oriented POST and does not need confirmation; cancelling a query does.
 

@@ -7,21 +7,24 @@ import { buildPath, Registry, type Operation } from './schema.js';
 const aliases: Record<string, string> = {
   flags: 'feature_flags', recordings: 'session_recordings', 'early-access': 'early_access_feature', schedules: 'scheduled_changes',
 };
-export function resourceRoot(name: string): string {
+function segments(registry: Registry): Map<string, string> {
+  const names = new Map<string, string>();
+  for (const op of registry.operations) {
+    const match = /^\/api\/projects\/\{project_id\}\/([^/{]+)\//.exec(op.path);
+    if (match) names.set(Object.entries(aliases).find(([, v]) => v === match[1])?.[0] ?? match[1]!.replaceAll('_', '-'), match[1]!);
+  }
+  return names;
+}
+export function resourceRoot(registry: Registry, name: string): string {
   if (name === 'projects') return '/api/organizations/{organization_id}/projects/';
-  return `/api/projects/{project_id}/${aliases[name] ?? name.replaceAll('-', '_')}/`;
+  return `/api/projects/{project_id}/${segments(registry).get(name) ?? ''}/`;
 }
 export function resourceOperations(registry: Registry, name: string): Operation[] {
-  const root = resourceRoot(name);
+  const root = resourceRoot(registry, name);
   return registry.operations.filter(op => op.path.startsWith(root));
 }
 export function resources(registry: Registry): string[] {
-  const names = new Set(['projects']);
-  for (const op of registry.operations) {
-    const match = /^\/api\/projects\/\{project_id\}\/([^/{]+)\//.exec(op.path);
-    if (match) names.add(Object.entries(aliases).find(([, v]) => v === match[1])?.[0] ?? match[1]!.replaceAll('_', '-'));
-  }
-  return [...names].sort();
+  return ['projects', ...segments(registry).keys()].sort();
 }
 export function verb(op: Operation, root: string): string {
   const detail = /^\{[^}]+\}\/$/.test(op.path.slice(root.length));
@@ -45,7 +48,7 @@ async function patchState(client: Client, path: string, desired: Record<string, 
   return { status: 'updated', result };
 }
 export async function resourceCommand(registry: Registry, client: Client, name: string, args: Args, project: string): Promise<unknown> {
-  const ops = resourceOperations(registry, name), root = resourceRoot(name);
+  const ops = resourceOperations(registry, name), root = resourceRoot(registry, name);
   if (!ops.length) throw new AxiError('unknown_command', 'Unknown resource', ['posthog-axi api resources']);
   const action = args.words[1] ?? 'list';
   if (args.has('help')) return { resource: name, shortcuts: name === 'flags' ? ['ensure --data <json>', 'enable ID --confirm', 'disable ID --confirm', 'rollout ID PERCENT --condition INDEX --confirm', 'Schedules: posthog-axi schedules --help'] : [], operations: ops.map(op => ({ command: verb(op, root), method: op.method, path: op.path })), help: ['<resource> list|show ID|create|update ID|replace ID|delete ID', 'Bodies: --data <json> or --input <file|->. Mutations: --confirm.', 'Create with --ensure <field> for sequential reconciliation. Use api describe <operation> for its contract.', 'Nonstandard actions use the exact operation ID as the subcommand.'] };
@@ -95,7 +98,11 @@ export async function resourceCommand(registry: Registry, client: Client, name: 
     }
     const matches = rows.map(object).filter(row => row[field] === desired[field]);
     if (matches.length > 1) throw new AxiError('ambiguous_match', 'Multiple objects have this identity; use an explicit ID');
-    if (matches[0]) return patchState(client, detailPath(path, matches[0].id), desired, name === 'flags');
+    if (matches[0]) {
+      const target = detailPath(path, matches[0].id), current = object(await client.request('GET', target));
+      if (name === 'flags' && current.archived === true && !Object.hasOwn(desired, 'archived')) return { status: 'archived', key: current.key, id: matches[0].id, help: [`posthog-axi flags update ${String(matches[0].id)} --data '{"archived":false}' --confirm`] };
+      return patchState(client, target, desired, name === 'flags', current);
+    }
   } else if (action === 'update' && jsonOnly) {
     if (args.has('raw') || args.has('form') || args.has('file-field') || args.has('header') || query.length) usage('Reconciled updates accept JSON only; use api call for other encodings or headers');
     const desired = await jsonBody(args);

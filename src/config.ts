@@ -3,10 +3,11 @@ import { open, mkdir, rename, unlink } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { createInterface } from 'node:readline/promises';
 import { AxiError, object } from './errors.js';
 import { normalizeHost } from './http.js';
 
-export interface Config { host: string; project: string; key?: string; auth: 'environment' | 'file' | 'none'; }
+export interface Config { host: string; project?: string; key?: string; auth: 'environment' | 'file' | 'none'; }
 export function configPath(env: NodeJS.ProcessEnv = process.env): string {
   return join(env.XDG_CONFIG_HOME || join(env.HOME || homedir(), '.config'), 'posthog-axi', 'config.json');
 }
@@ -33,8 +34,8 @@ export async function resolveConfig(overrides: { host?: string; project?: string
   // A complete environment key takes precedence without reading stale disk credentials.
   const saved = env.POSTHOG_API_KEY ? {} : await readConfig(configPath(env));
   const host = normalizeHost(overrides.host ?? env.POSTHOG_HOST ?? String(saved.host ?? 'https://us.posthog.com'));
-  const project = overrides.project ?? env.POSTHOG_PROJECT_ID ?? String(saved.project ?? '613011');
-  if (!/^\d+$/.test(project)) throw new AxiError('invalid_project', 'Project must be a numeric ID');
+  const project = overrides.project ?? env.POSTHOG_PROJECT_ID ?? (saved.project as string | undefined);
+  if (project !== undefined && !/^\d+$/.test(project)) throw new AxiError('invalid_project', 'Project must be a numeric ID');
   const fileKey = saved.host && normalizeHost(String(saved.host)) === host ? String(saved.key) : undefined;
   const key = env.POSTHOG_API_KEY || fileKey;
   return { host, project, key, auth: env.POSTHOG_API_KEY ? 'environment' : fileKey ? 'file' : 'none' };
@@ -62,8 +63,16 @@ export async function logout(path: string): Promise<void> {
   await unlink(path).catch((e: unknown) => { if (!missing(e)) throw new AxiError('config_error', 'Could not remove credential file'); });
 }
 
+function requireTerminal(input: { isTTY?: boolean }, output: { isTTY?: boolean }): void {
+  if (!input.isTTY || !output.isTTY) throw new AxiError('tty_required', 'Login needs a terminal for hidden input', ['For automation, set POSTHOG_API_KEY and POSTHOG_PROJECT_ID; never pass keys as command arguments.']);
+}
+export async function promptLine(question: string, input = process.stdin, output = process.stderr): Promise<string> {
+  requireTerminal(input, output);
+  const rl = createInterface({ input, output });
+  try { return await rl.question(question); } finally { rl.close(); }
+}
 export function promptKey(input = process.stdin, output = process.stderr): Promise<string> {
-  if (!input.isTTY || !output.isTTY) throw new AxiError('tty_required', 'Login needs a terminal for hidden input', ['For automation, set POSTHOG_API_KEY; never pass keys as command arguments.']);
+  requireTerminal(input, output);
   return new Promise((resolve, reject) => {
     let value = '';
     const wasRaw = input.isRaw;
