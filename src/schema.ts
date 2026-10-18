@@ -77,7 +77,7 @@ export function buildPath(op: Operation, values: Record<string, string>, project
   const path = op.path.replace(/\{([^}]+)\}/g, (_match, name: string) => {
     used.add(name);
     const value = values[name] ?? (name === 'project_id' ? project : undefined);
-    if (name === 'project_id' && !value) throw new AxiError('missing_project', 'No project configured; run posthog-axi login or pass --project', ['posthog-axi login', '--project <id>']);
+    if (name === 'project_id' && !value) throw new AxiError('missing_project', 'No project configured; run posthog-axi login or pass --project', ['posthog-axi login', '--project <id>', 'Or set POSTHOG_PROJECT_ID when POSTHOG_API_KEY comes from the environment']);
     if (!value || value === '.' || value === '..' || /[\\\x00-\x1f]/.test(value)) throw new AxiError('invalid_parameter', `Provide a valid path value for ${name}`, [`--param ${name}=<value>`]);
     return encodeURIComponent(value);
   });
