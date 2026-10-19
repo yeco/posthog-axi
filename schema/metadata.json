@@ -1,0 +1,10 @@
+{
+  "source": "https://us.posthog.com/api/schema/",
+  "fetched_at": "2026-10-19T18:34:09.846Z",
+  "openapi": "3.1.0",
+  "api_version": "1.0.0",
+  "sha256": "d6c957298770093265d8c68e4915a4ba4d1237a32b9d3c8ecf4b24baa21f64f2",
+  "snapshot_sha256": "608da487399ed13a170d62fb4aa9162d415cb5525fd19de602882ab48ed86956",
+  "paths": 1801,
+  "operations": 2409
+}
