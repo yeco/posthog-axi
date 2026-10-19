@@ -106,7 +106,7 @@ export async function run(argv: string[], runtime: Runtime = {}): Promise<{ outp
       try { home.recent_flags = await client.request('GET', `/api/projects/${config.project}/feature_flags/?limit=3`); }
       catch (e) { home.connection = errorOutput(e); }
     }
-    home.help = [key && config.project ? 'flags list | experiments list | query "select 1"' : 'posthog-axi login', 'api resources | api operations --search <term>', 'api-version compares this build with the live API schema'];
+    home.help = [key && config.project ? 'flags list | experiments list | query "select 1"' : config.auth === 'environment' ? 'Set POSTHOG_PROJECT_ID or pass --project; POSTHOG_API_KEY bypasses the saved login' : 'posthog-axi login', 'api resources | api operations --search <term>', 'api-version compares this build with the live API schema'];
     return output(home);
   } catch (e) {
     const code = object(e).code === 'usage' ? 2 : 1;

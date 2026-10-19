@@ -160,9 +160,12 @@ test('project commands without a configured project fail before HTTP with a logi
     const result = await run([...argv, '--json'], { env: bare, fetch: noNetwork });
     const body = JSON.parse(result.output);
     assert.equal(result.code, 1); assert.equal(body.error.code, 'missing_project'); assert.match(body.error.message, /posthog-axi login or pass --project/);
+    assert.ok(body.help.some(line => line.includes('POSTHOG_PROJECT_ID')));
   }
   const auth = JSON.parse((await run(['auth', '--json'], { env: bare, fetch: noNetwork })).output);
   assert.equal(auth.project, null);
+  const home = JSON.parse((await run(['--json'], { env: bare, fetch: noNetwork })).output);
+  assert.match(home.help[0], /POSTHOG_PROJECT_ID/);
 });
 test('login prompts for host and project and stores them with the key', async () => {
   const { mkdtemp, readFile, rm } = await import('node:fs/promises');
