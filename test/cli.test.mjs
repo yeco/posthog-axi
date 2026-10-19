@@ -52,10 +52,10 @@ test('rollout uses current version and never rewrites unrelated release conditio
   assert.equal(writes, 1);
   assert.equal((await cli(['flags', 'rollout', '1', '101', '--confirm'], fetch)).code, 2);
 });
-test('create ensure reconciles by identity, rejects ambiguous results and supports schedules', async () => {
+test('create ensure reconciles by identity and supports schedules', async () => {
   let writes = 0;
   const fetch = async (url, init) => {
-    if (init.method === 'GET') return json({ results: [{ id: 1, key: 'beta', active: true }], next: null });
+    if (init.method === 'GET') return json(url.pathname.endsWith('/1/') ? { id: 1, key: 'beta', active: true } : { results: [{ id: 1, key: 'beta', active: true }], next: null });
     writes++; return json({ id: 1 });
   };
   const result = await cli(['flags', 'ensure', '--data', '{"key":"beta","active":true}', '--confirm'], fetch);

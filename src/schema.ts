@@ -77,7 +77,7 @@ export function buildPath(op: Operation, values: Record<string, string>, project
   const path = op.path.replace(/\{([^}]+)\}/g, (_match, name: string) => {
     used.add(name);
     const value = values[name] ?? (name === 'project_id' ? project : undefined);
-    if (!value || value === '.' || value === '..' || /[\\/\x00-\x1f]/.test(value)) throw new AxiError('invalid_parameter', `Provide a valid path value for ${name}`, [`--param ${name}=<value>`]);
+    if (!value || value === '.' || value === '..' || /[\\\x00-\x1f]/.test(value)) throw new AxiError('invalid_parameter', `Provide a valid path value for ${name}`, [`--param ${name}=<value>`]);
     return encodeURIComponent(value);
   });
   if (Object.keys(values).some(k => !used.has(k))) throw new AxiError('unknown_parameter', 'A supplied path parameter does not belong to this operation');
