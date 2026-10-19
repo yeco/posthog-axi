@@ -24,7 +24,7 @@ node dist/bin.js --help
 
 `login` asks for the host (default `https://us.posthog.com`), the project ID and a personal API key. It doesn't echo the key, verifies it with PostHog, and writes a 0600 file at `~/.config/posthog-axi/config.json`. `XDG_CONFIG_HOME` changes that base directory. There is no key argument to leak into shell history. Create a key with the scopes you need in [PostHog's personal API key settings](https://us.posthog.com/settings/user-api-keys).
 
-There's no built-in project. Without a saved or supplied project, project commands fail with `missing_project` and tell you to run `posthog-axi login` or pass `--project`. Override the saved target explicitly:
+There's no built-in project. Without a saved or supplied project, project commands fail with `missing_project` and tell you to run `posthog-axi login` or pass `--project` (or set `POSTHOG_PROJECT_ID` when the key comes from `POSTHOG_API_KEY`, which bypasses the saved login). Override the saved target explicitly:
 
 ```sh
 posthog-axi flags list --host https://eu.posthog.com --project 123
