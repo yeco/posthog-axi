@@ -55,6 +55,7 @@ test('rollout uses current version and never rewrites unrelated release conditio
 test('create ensure reconciles by identity and supports schedules', async () => {
   let writes = 0;
   const fetch = async (url, init) => {
+    if (url.searchParams.get('archived') === 'true') return json({ results: [], next: null });
     if (init.method === 'GET') return json(url.pathname.endsWith('/1/') ? { id: 1, key: 'beta', active: true } : { results: [{ id: 1, key: 'beta', active: true }], next: null });
     writes++; return json({ id: 1 });
   };
@@ -121,4 +122,14 @@ test('explicit stale flag version is a conflict, not silently replaced', async (
     return json({ name: 'current', version: 2 });
   });
   assert.equal(result.error.code, 'conflict'); assert.equal(writes, 0);
+});
+test('flags ensure finds archived identity rather than creating a duplicate', async () => {
+  let creates = 0;
+  const result = await cli(['flags', 'ensure', '--data', '{"key":"archived-flag","archived":false}', '--confirm'], async (url, init) => {
+    if (init.method === 'POST') { creates++; return json({ id: 2 }); }
+    if (init.method === 'PATCH') { assert.equal(url.pathname, '/api/projects/613011/feature_flags/1/'); return json({ id: 1, archived: false }); }
+    if (url.pathname.endsWith('/1/')) return json({ id: 1, key: 'archived-flag', archived: true, version: 5 });
+    return json({ results: url.searchParams.get('archived') === 'true' ? [{ id: 1, key: 'archived-flag' }] : [], next: null });
+  });
+  assert.equal(result.status, 'updated'); assert.equal(creates, 0);
 });
