@@ -8,7 +8,7 @@ test('private atomic login, precedence and host binding', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'posthog-axi-'));
   try {
     const env = { XDG_CONFIG_HOME: dir }; const path = configPath(env);
-    await saveConfig(path, { host: 'https://us.posthog.com', project: '613011', key: 'phx_fake' });
+    await saveConfig(path, { host: 'https://us.posthog.com', project: '123', key: 'phx_fake' });
     assert.equal((await stat(path)).mode & 0o777, 0o600);
     assert.equal(JSON.parse(await readFile(path, 'utf8')).key, 'phx_fake');
     assert.equal((await resolveConfig({}, env)).auth, 'file');

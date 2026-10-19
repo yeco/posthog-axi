@@ -15,10 +15,10 @@ test('every pinned operation executes its HTTP method and path with mocked trans
     args.flags.set('query', op.parameters.filter(p => p.in === 'query' && p.required).map(p => `${p.name}=test`));
     args.flags.set('header', op.parameters.filter(p => p.in === 'header' && p.required).map(p => `${p.name}=test`));
     const client = new Client('https://us.posthog.com', 'phx_mock', async (url, init) => {
-      calls++; assert.equal(url.pathname, buildPath(op, params, '613011')); assert.equal(init.method, op.method);
+      calls++; assert.equal(url.pathname, buildPath(op, params, '123')); assert.equal(init.method, op.method);
       return new Response(null, { status: 204 });
     });
-    await execute(registry, client, registry.get(op.id), args, '613011');
+    await execute(registry, client, registry.get(op.id), args, '123');
   }
   assert.equal(calls, schemaMetadata().operations); assert.equal(calls, 2409);
 });

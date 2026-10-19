@@ -21,6 +21,6 @@ if (action === 'update') {
   if (createHash('sha256').update(bytes).digest('hex') !== meta.snapshot_sha256) throw new Error('Snapshot byte digest mismatch');
   const recorded = JSON.parse(await readFile(new URL('coverage.json', root), 'utf8'));
   if (hash(expected) !== hash(recorded) || hash(registry.document) !== meta.sha256 || registry.operations.length !== meta.operations) throw new Error('Schema or coverage metadata is stale; run npm run schema:update and review the diff');
-  for (const op of registry.operations) buildPath(registry.get(op.id), Object.fromEntries([...op.path.matchAll(/\{([^}]+)\}/g)].map(m => [m[1], '123'])), '613011');
+  for (const op of registry.operations) buildPath(registry.get(op.id), Object.fromEntries([...op.path.matchAll(/\{([^}]+)\}/g)].map(m => [m[1], '123'])), '123');
   console.log(`coverage: ${expected.length}/${meta.operations} operations routable`);
 } else throw new Error('Usage: node scripts/schema.mjs check|update');
