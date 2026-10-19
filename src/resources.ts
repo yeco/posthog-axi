@@ -38,6 +38,7 @@ function detailPath(root: string, id: unknown): string {
 }
 async function patchState(client: Client, path: string, desired: Record<string, unknown>, flag: boolean, current?: Record<string, unknown>) {
   const before = current ?? object(await client.request('GET', path));
+  if (flag && Object.hasOwn(desired, 'version') && desired.version !== (before.version ?? null)) throw new AxiError('conflict', 'Requested flag version differs from current state; read the flag before retrying', [], 409);
   if (subset(desired, before)) return { status: 'unchanged', result: before };
   const payload = flag ? { ...desired, version: before.version ?? null } : desired;
   const result = await client.request('PATCH', path, { contentType: 'application/json', body: JSON.stringify(payload) });
@@ -75,6 +76,7 @@ export async function resourceCommand(registry: Registry, client: Client, name: 
   const path = buildPath(op, uniquePairs(extra), project);
   if (args.has('all') && op.method !== 'GET') usage('--all is only valid for list/read operations');
   const jsonOnly = args.has('data') || args.has('input');
+  if ((args.has('ensure') || action === 'update') && args.has('content-type') && args.get('content-type') !== 'application/json') usage('Reconciliation accepts application/json only; use api call for another content type');
   if (args.has('ensure')) {
     if (action !== 'create' || !jsonOnly) usage('--ensure is for create with a JSON body');
     if (query.length || args.has('raw') || args.has('form') || args.has('file-field') || args.has('header')) usage('--ensure accepts only JSON body and connection options');

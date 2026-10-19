@@ -29,3 +29,10 @@ test('cursor pagination, 204 and redirects', async () => {
   assert.equal(await new Client('https://us.posthog.com', 'fake', async () => new Response(null, { status: 204 })).request('DELETE', '/api/projects/1/'), null);
   await assert.rejects(new Client('https://us.posthog.com', 'fake', async () => new Response(null, { status: 302 })).request('GET', '/api/projects/'), { code: 'redirect_refused' });
 });
+test('explicit response negotiation survives default headers', async () => {
+  const client = new Client('https://us.posthog.com', 'fake', async (_url, init) => {
+    assert.equal(init.headers.get('accept'), 'text/csv');
+    return new Response('a,b\n1,2', { headers: { 'content-type': 'text/csv' } });
+  });
+  assert.equal((await client.request('GET', '/api/export/', { headers: { Accept: 'text/csv' } })).text, 'a,b\n1,2');
+});

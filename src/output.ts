@@ -1,5 +1,5 @@
 import { encode } from '@toon-format/toon';
-const sensitive = /^(authorization|cookie|set-cookie|password|secret|token|api_key|access_token|refresh_token|personal_api_key|secret_api_key)$/i;
+const sensitive = /(^|[_-])(authorization|cookie|password|secret|token|api_key)([_-]|$)/i;
 export function redact(value: unknown, secrets: string[] = []): unknown {
   if (typeof value === 'string') {
     let safe = value.replace(/phx_[A-Za-z0-9_-]+/g, '[redacted]').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '');
@@ -7,7 +7,7 @@ export function redact(value: unknown, secrets: string[] = []): unknown {
     return safe;
   }
   if (Array.isArray(value)) return value.map(v => redact(v, secrets));
-  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [String(redact(k, secrets)), sensitive.test(k) ? '[redacted]' : redact(v, secrets)]));
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [String(redact(k, secrets)), sensitive.test(k.replace(/([a-z0-9])([A-Z])/g, '$1_$2')) ? '[redacted]' : redact(v, secrets)]));
   return value;
 }
 export function render(value: unknown, options: { full?: boolean; json?: boolean; secrets?: string[] } = {}): string {

@@ -114,3 +114,11 @@ test('live api-version omits Authorization and --check distinguishes drift', asy
   const result = await cli(['api-version', '--check'], fetch);
   assert.equal(result.code, 3); assert.equal(result.drift, true); assert.ok(result.target.sha256);
 });
+test('explicit stale flag version is a conflict, not silently replaced', async () => {
+  let writes = 0;
+  const result = await cli(['flags', 'update', '1', '--data', '{"name":"next","version":1}', '--confirm'], async (_url, init) => {
+    if (init.method !== 'GET') writes++;
+    return json({ name: 'current', version: 2 });
+  });
+  assert.equal(result.error.code, 'conflict'); assert.equal(writes, 0);
+});
