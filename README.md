@@ -1,14 +1,14 @@
 # posthog-axi
 
-A PostHog CLI for AI agents and scripts. It can call every operation in PostHog's published OpenAPI schema, run HogQL queries, and manage feature flags, experiments, surveys and other common resources with confirmed writes and repeatable `ensure` and `update` commands.
+posthog-axi is my PostHog CLI for AI agents and scripts. It can call every operation in PostHog's published OpenAPI schema, run HogQL queries, and manage feature flags, experiments, surveys and a few other common resources (writes need `--confirm`, and `ensure` and `update` are meant to be run more than once).
 
 I wanted PostHog to fit the way I work with agents: inspect what's available, make a small request, and get enough context to decide what to do next. This is my CLI for that workflow.
 
 It targets PostHog's published OpenAPI schema rather than a hand-maintained list of endpoints. The pinned snapshot has 2,409 operations across 1,801 paths. Every one has an `api call` command. Common resources also get shorter commands (feature flags deserved a few extra conveniences).
 
-## Install and log in
+## Installing it and logging in
 
-Requires Node.js 22 or newer. Once published:
+Requires Node.js 22 or newer. It's on npm:
 
 ```sh
 npm install -g posthog-axi
@@ -38,7 +38,7 @@ For automation, provide `POSTHOG_API_KEY` through your secret environment, with 
 
 No arguments gives a compact home with the selected target and, when authenticated, recent flags. An unavailable project or missing scope shows a connection error rather than an empty result.
 
-## Discover PostHog API operations
+## How do I find the right PostHog API operation?
 
 ```sh
 posthog-axi api resources
@@ -65,7 +65,7 @@ The current schema places project administration under organizations, so those c
 
 `api describe` includes parameter and request-body definitions. Nested `$ref` values can be inspected with `api schema <name>`. The CLI checks routing and required parameters/body presence; PostHog validates the full request payload and permissions. Some schema operations need special authentication or enabled products. Being listed here does not grant access to them.
 
-## Compact output and pagination
+## Compact output, and what about pagination?
 
 Output is [TOON](https://toonformat.dev). Compact mode previews long values and shows at most 20 items per array, with explicit omission notices. `--full` preserves all returned fields and rows. `--json` gives the full response as JSON. Both still redact known credential fields and the active personal key.
 
@@ -79,7 +79,7 @@ posthog-axi api operations --search surveys --limit 10 --offset 10
 
 Pagination follows the server's cursor, stays on the selected host and stops on repeated cursors or after 1,000 pages. Use narrower filters for larger exports. Query parameters can always be passed as repeated `--query name=value`; resource shortcuts also accept their non-conflicting schema query names as kebab-case options.
 
-## Repeatable writes and feature flags
+## Feature flags and writes you can repeat
 
 ```sh
 posthog-axi flags ensure --data '{"key":"new-checkout","name":"New checkout","active":false}' --confirm
@@ -116,7 +116,7 @@ For example, `schedule.json` can contain:
 
 Use a future time for your run. The schema describes recurrence and approval-related fields too.
 
-## HogQL queries, uploads and other endpoints
+## HogQL queries, uploads and the less common endpoints
 
 ```sh
 posthog-axi query 'select event, count() from events group by event limit 10'
@@ -132,7 +132,7 @@ Non-JSON responses retain text or base64-encoded bytes. Event streams return a b
 
 Errors go to stdout as structured data. Exit codes are 0 for success, 1 for request/authentication failures, 2 for usage errors and 3 for drift under `api-version --check`. HTTP failures include the status and, for rate limits, `retry_after`. Server error bodies are deliberately omitted because they can echo sensitive input.
 
-## PostHog API version and schema drift
+## Which PostHog API version does this build target?
 
 ```sh
 posthog-axi api-version --offline
@@ -145,7 +145,7 @@ The snapshot comes from [PostHog's `/api/schema/`](https://us.posthog.com/api/sc
 
 Exhaustive here means every operation in this published schema is routable. It does not invent endpoints absent from the schema, cover SDK ingestion protocols, or claim every product workflow was tested against a live account. Runtime traffic stays on the configured host, redirects are refused, and there is no telemetry, self-update process or automatic agent-hook installation.
 
-## Development
+## Working on it locally
 
 ```sh
 npm test
