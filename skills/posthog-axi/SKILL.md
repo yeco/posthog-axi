@@ -1,6 +1,6 @@
 ---
 name: posthog-axi
-description: Query PostHog, manage feature flags and schedules, or discover and call operations from its pinned public OpenAPI schema. Use for analytics reads, resource mutations, and API compatibility checks.
+description: Query PostHog with HogQL, manage feature flags and schedules, or discover and call operations from its pinned public OpenAPI schema. Use for analytics reads, resource mutations, and API compatibility checks.
 ---
 
 # PostHog workflow
