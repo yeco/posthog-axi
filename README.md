@@ -1,10 +1,12 @@
 # posthog-axi
 
+A PostHog CLI for AI agents and scripts. It can call every operation in PostHog's published OpenAPI schema, run HogQL queries, and manage feature flags, experiments, surveys and other common resources with confirmed writes and repeatable `ensure` and `update` commands.
+
 I wanted PostHog to fit the way I work with agents: inspect what's available, make a small request, and get enough context to decide what to do next. This is my CLI for that workflow.
 
 It targets PostHog's published OpenAPI schema rather than a hand-maintained list of endpoints. The pinned snapshot has 2,409 operations across 1,801 paths. Every one has an `api call` command. Common resources also get shorter commands (feature flags deserved a few extra conveniences).
 
-## Get it running
+## Install and log in
 
 Requires Node.js 22 or newer. Once published:
 
@@ -36,7 +38,7 @@ For automation, provide `POSTHOG_API_KEY` through your secret environment, with 
 
 No arguments gives a compact home with the selected target and, when authenticated, recent flags. An unavailable project or missing scope shows a connection error rather than an empty result.
 
-## Find the operation before guessing the request
+## Discover PostHog API operations
 
 ```sh
 posthog-axi api resources
@@ -63,7 +65,7 @@ The current schema places project administration under organizations, so those c
 
 `api describe` includes parameter and request-body definitions. Nested `$ref` values can be inspected with `api schema <name>`. The CLI checks routing and required parameters/body presence; PostHog validates the full request payload and permissions. Some schema operations need special authentication or enabled products. Being listed here does not grant access to them.
 
-## Reads stay small
+## Compact output and pagination
 
 Output is [TOON](https://toonformat.dev). Compact mode previews long values and shows at most 20 items per array, with explicit omission notices. `--full` preserves all returned fields and rows. `--json` gives the full response as JSON. Both still redact known credential fields and the active personal key.
 
@@ -77,7 +79,7 @@ posthog-axi api operations --search surveys --limit 10 --offset 10
 
 Pagination follows the server's cursor, stays on the selected host and stops on repeated cursors or after 1,000 pages. Use narrower filters for larger exports. Query parameters can always be passed as repeated `--query name=value`; resource shortcuts also accept their non-conflicting schema query names as kebab-case options.
 
-## Make a change you can repeat
+## Repeatable writes and feature flags
 
 ```sh
 posthog-axi flags ensure --data '{"key":"new-checkout","name":"New checkout","active":false}' --confirm
@@ -114,7 +116,7 @@ For example, `schedule.json` can contain:
 
 Use a future time for your run. The schema describes recurrence and approval-related fields too.
 
-## Queries, uploads and the less common endpoints
+## HogQL queries, uploads and other endpoints
 
 ```sh
 posthog-axi query 'select event, count() from events group by event limit 10'
@@ -130,7 +132,7 @@ Non-JSON responses retain text or base64-encoded bytes. Event streams return a b
 
 Errors go to stdout as structured data. Exit codes are 0 for success, 1 for request/authentication failures, 2 for usage errors and 3 for drift under `api-version --check`. HTTP failures include the status and, for rate limits, `retry_after`. Server error bodies are deliberately omitted because they can echo sensitive input.
 
-## Which API does this build target?
+## PostHog API version and schema drift
 
 ```sh
 posthog-axi api-version --offline
@@ -143,7 +145,7 @@ The snapshot comes from [PostHog's `/api/schema/`](https://us.posthog.com/api/sc
 
 Exhaustive here means every operation in this published schema is routable. It does not invent endpoints absent from the schema, cover SDK ingestion protocols, or claim every product workflow was tested against a live account. Runtime traffic stays on the configured host, redirects are refused, and there is no telemetry, self-update process or automatic agent-hook installation.
 
-## Working on it
+## Development
 
 ```sh
 npm test
@@ -155,5 +157,7 @@ npm run pack:check
 Tests use mocked HTTP and a loopback fixture server, never a real key. CI runs on Node 22 and 24. Refresh the snapshot deliberately with `npm run schema:update`, inspect the diff and commit the metadata with it. [CONTRIBUTING.md](https://github.com/yeco/posthog-axi/blob/main/CONTRIBUTING.md) describes the implementation boundaries. The agent workflow lives in `skills/posthog-axi/SKILL.md`; install that directory through your agent's skill mechanism if you want it available there.
 
 For a release, run `npm pack --dry-run` and inspect what ships, then `npm publish --access public`. `prepublishOnly` builds, runs the tests and checks schema coverage. Publishing is a separate operator action.
+
+## License
 
 MIT. Copyright (c) 2026 Jasson Cascante.

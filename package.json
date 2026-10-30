@@ -1,7 +1,21 @@
 {
   "name": "posthog-axi",
   "version": "0.1.0",
-  "description": "Jasson Cascante's schema-driven PostHog CLI for agents",
+  "description": "PostHog CLI for AI agents and automation: call every operation in PostHog's OpenAPI schema, run HogQL queries, and manage feature flags, experiments and surveys with compact TOON output.",
+  "keywords": [
+    "posthog",
+    "posthog-api",
+    "posthog-cli",
+    "cli",
+    "ai-agents",
+    "agent-tools",
+    "openapi",
+    "hogql",
+    "feature-flags",
+    "experiments",
+    "product-analytics",
+    "toon"
+  ],
   "type": "module",
   "bin": {
     "posthog-axi": "dist/bin.js"
@@ -19,6 +33,10 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/yeco/posthog-axi.git"
+  },
+  "homepage": "https://github.com/yeco/posthog-axi#readme",
+  "bugs": {
+    "url": "https://github.com/yeco/posthog-axi/issues"
   },
   "author": "Jasson Cascante",
   "license": "MIT",
