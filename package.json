@@ -1,7 +1,7 @@
 {
   "name": "posthog-axi",
   "version": "0.1.0",
-  "description": "PostHog CLI for AI agents and automation: call every operation in PostHog's OpenAPI schema, run HogQL queries, and manage feature flags, experiments and surveys with compact TOON output.",
+  "description": "My PostHog CLI for AI agents and scripts: every operation in PostHog's OpenAPI schema, HogQL queries, feature flags, experiments and surveys, with compact TOON output.",
   "keywords": [
     "posthog",
     "posthog-api",
@@ -34,7 +34,7 @@
     "type": "git",
     "url": "git+https://github.com/yeco/posthog-axi.git"
   },
-  "homepage": "https://github.com/yeco/posthog-axi#readme",
+  "homepage": "https://www.npmjs.com/package/posthog-axi",
   "bugs": {
     "url": "https://github.com/yeco/posthog-axi/issues"
   },
